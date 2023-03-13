@@ -5,6 +5,20 @@ namespace Mirality.FileProviders.InMemory.Tests;
 public class InMemoryFileProviderTests
 {
     [Test]
+    public void Null()
+    {
+        var provider = new InMemoryFileProvider();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(() => provider.GetFileInfo(null!), Throws.ArgumentNullException);
+            Assert.That(() => provider.GetDirectoryContents(null!), Throws.ArgumentNullException);
+            Assert.That(() => provider.Write(null!, "test"), Throws.ArgumentNullException);
+            Assert.That(() => provider.Delete(null!), Throws.ArgumentNullException);
+        });
+    }
+
+    [Test]
     public void NonExistingFiles()
     {
         var provider = new InMemoryFileProvider();
@@ -93,24 +107,26 @@ public class InMemoryFileProviderTests
             Assert.That(dir1.IsDirectory, Is.True);
             Assert.That(dir1.Exists, Is.True);
             Assert.That(() => dir1.CreateReadStream(), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(dir1.LastModified, Is.EqualTo(DateTimeOffset.Now).Within(TimeSpan.FromSeconds(5)));
+            Assert.That(dir1.Length, Is.EqualTo(-1));
 
             Assert.That(dir2.Name, Is.EqualTo("another"));
             Assert.That(dir2.PhysicalPath, Is.Null);
             Assert.That(dir2.IsDirectory, Is.True);
             Assert.That(dir2.Exists, Is.True);
             Assert.That(() => dir2.CreateReadStream(), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(dir2.LastModified, Is.EqualTo(DateTimeOffset.Now).Within(TimeSpan.FromSeconds(5)));
+            Assert.That(dir2.Length, Is.EqualTo(-1));
         });
     }
 
     [Test]
     public void DirectoryContents()
     {
-        var provider = new InMemoryFileProvider
-        {
-            ["test.txt"] = new InMemoryFileInfo("test.txt", "hello world"),
-            ["another/file.bin"] = new InMemoryFileInfo("file.bin", new byte[] { 1, 2, 3, 4, 5 }),
-            ["another/child/folder.txt"] = new InMemoryFileInfo("folder.txt", "grandchild"),
-        };
+        var provider = new InMemoryFileProvider();
+        provider.Write("test.txt", "hello world");
+        provider.Write("another/file.bin", new byte[] { 1, 2, 3, 4, 5 });
+        provider.Write("another/child/folder.txt", "grandchild");
 
         var dir1 = provider.GetDirectoryContents("");
         var dir2 = provider.GetDirectoryContents("another");
@@ -126,6 +142,9 @@ public class InMemoryFileProviderTests
 
             Assert.That(dir3.Exists, Is.False);
             Assert.That(dir3.Select(f => f.Name), Is.Empty);
+
+            // for coverage
+            Assert.That(((System.Collections.IEnumerable) dir2).OfType<IFileInfo>().Select(f => f.Name), Is.EquivalentTo(new[] { "file.bin", "child" }));
         });
     }
 
@@ -142,13 +161,13 @@ public class InMemoryFileProviderTests
         provider["another/wrongfile.bin"] = new InMemoryFileInfo("wrongfile.bin", "test");
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/file.bin"] = new InMemoryFileInfo("file.bin", "test");
+        provider.Write("another/file.bin", "test");
         Assert.That(token.HasChanged, Is.True);
 
         token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/file.bin"] = null;
+        provider.Delete("another/file.bin");
         Assert.That(token.HasChanged, Is.True);
     }
 
@@ -179,13 +198,13 @@ public class InMemoryFileProviderTests
         var token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/file.bin"] = null;
+        provider.Delete("another/file.bin");
         Assert.That(token.HasChanged, Is.True);
 
         token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/file.bin"] = null;
+        provider.Delete("another/file.bin");
         Assert.That(token.HasChanged, Is.False);
     }
 
@@ -222,22 +241,22 @@ public class InMemoryFileProviderTests
         var token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["wrong/file.bin"] = new InMemoryFileInfo("file.bin", "test");
+        provider.Write("wrong/file.bin", "test");
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/file.bin"] = new InMemoryFileInfo("file.bin", "test");
+        provider.Write("another/file.bin", "test");
         Assert.That(token.HasChanged, Is.True);
 
         token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/secondfile.bin"] = new InMemoryFileInfo("secondfile.bin", "test");
+        provider.Write("another/secondfile.bin", "test");
         Assert.That(token.HasChanged, Is.True);
 
         token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/child/file.bin"] = new InMemoryFileInfo("file.bin", "test");
+        provider.Write("another/child/file.bin", "test");
         Assert.That(token.HasChanged, Is.True);
     }
 
@@ -251,16 +270,16 @@ public class InMemoryFileProviderTests
         var token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["subdir/wrong.bin"] = new InMemoryFileInfo("wrong.bin", "test");
+        provider.Write("subdir/wrong.bin", "test");
         Assert.That(token.HasChanged, Is.False);
 
-        provider["subdir/file.bin"] = new InMemoryFileInfo("file.bin", "test");
+        provider.Write("subdir/file.bin", "test");
         Assert.That(token.HasChanged, Is.True);
 
         token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);
 
-        provider["another/fred.bin"] = new InMemoryFileInfo("fred.bin", "test");
+        provider.Write("another/fred.bin", "test");
         Assert.That(token.HasChanged, Is.True);
     }
 
@@ -280,14 +299,14 @@ public class InMemoryFileProviderTests
             Assert.That(token2.HasChanged, Is.False);
         });
 
-        provider["subdir/wrong.bin"] = new InMemoryFileInfo("wrong.bin", "test");
+        provider.Write("subdir/wrong.bin", "test");
         Assert.Multiple(() =>
         {
             Assert.That(token1.HasChanged, Is.False);
             Assert.That(token2.HasChanged, Is.False);
         });
 
-        provider["another/fred.bin"] = new InMemoryFileInfo("fred.bin", "test");
+        provider.Write("another/fred.bin", "test");
         Assert.Multiple(() =>
         {
             Assert.That(token1.HasChanged, Is.True);
@@ -300,12 +319,8 @@ public class InMemoryFileProviderTests
     {
         const string filter = "test.txt";
 
-        var file = new InMemoryFileInfo("test.txt", "content");
-
-        var provider = new InMemoryFileProvider()
-        {
-            ["test.txt"] = file,
-        };
+        var provider = new InMemoryFileProvider();
+        var file = provider.Write("test.txt", "content");
 
         var token = provider.Watch(filter);
         Assert.That(token.HasChanged, Is.False);

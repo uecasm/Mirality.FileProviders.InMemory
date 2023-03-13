@@ -78,6 +78,37 @@ public class InMemoryFileProvider : IFileProvider
         set => _ = Change(NormalizePath(path), value);
     }
 
+    /// <summary>Creates or overwrites a file.</summary>
+    /// <param name="path">The full relative file path.</param>
+    /// <param name="content">The file content.</param>
+    /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now"/>.</param>
+    /// <returns>The <see cref="IFileInfo"/> for this file.</returns>
+    public IFileInfo Write(string path, byte[] content, DateTimeOffset? lastModified = null)
+    {
+        var fileInfo = new InMemoryFileInfo(Path.GetFileName(path), content, lastModified);
+        this[path] = fileInfo;
+        return fileInfo;
+    }
+
+    /// <summary>Creates or overwrites a file.</summary>
+    /// <param name="path">The full relative file path.</param>
+    /// <param name="content">The file content (assumes UTF-8 encoding).</param>
+    /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now"/>.</param>
+    public IFileInfo Write(string path, string content, DateTimeOffset? lastModified = null)
+    {
+        var fileInfo = new InMemoryFileInfo(Path.GetFileName(path), content, lastModified);
+        this[path] = fileInfo;
+        return fileInfo;
+    }
+
+    /// <summary>Deletes a file.</summary>
+    /// <remarks>It's not an error if the file already does not exist.</remarks>
+    /// <param name="path">The full relative file path.</param>
+    public void Delete(string path)
+    {
+        this[path] = null!;
+    }
+
     private IChangeToken Change(string path, IFileInfo? value)
     {
         value ??= new NotFoundFileInfo(Path.GetFileName(path));
