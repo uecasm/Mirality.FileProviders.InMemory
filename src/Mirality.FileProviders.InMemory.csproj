@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>10</LangVersion>
-    <VersionPrefix>6.0.1</VersionPrefix>
+    <VersionPrefix>6.1.0</VersionPrefix>
     <Nullable>enable</Nullable>
     <Authors>uecasm</Authors>
     <Company>Mirality Systems</Company>
@@ -28,15 +28,15 @@
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
-	
-	<ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="6.0.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-  </ItemGroup>
-
-	<ItemGroup>
-		<None Include="../README.md" PackagePath="" Pack="true" />
 	</ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" PackagePath="" Pack="true" />
+  </ItemGroup>
 
 </Project>

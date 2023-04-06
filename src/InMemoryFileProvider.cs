@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Primitives;
@@ -14,17 +15,18 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Mirality.FileProviders.InMemory;
 
-/// <summary>A mutable <see cref="IFileProvider"/> that stores "files" in-memory rather than in a real filesystem.
+/// <summary>An <see cref="IWritableFileProvider"/> that stores "files" in-memory rather than in a real filesystem.
 /// It supports <see cref="Watch">watching for changes</see>.</summary>
 /// <remarks>
-/// <para>While this is primarily intended for unit testing code that uses that interface (and that has more
-/// complex requirements than using a simple stub), this can also be used in production apps if required,
-/// typically in conjunction with <c>CompositeFileProvider</c> and some other provider.</para>
+/// <para>While this is primarily intended for unit testing code that uses either that interface or
+/// <see cref="IFileProvider"/> (and that has more complex requirements than using a simple stub), this can also
+/// be used in production apps if required, typically in conjunction with <c>CompositeFileProvider</c> and some
+/// other provider.</para>
 /// <para>Currently, empty directories are not supported; if you remove all files within a directory it will
 /// automatically remove the directory as well.  This might change in a future release if people ask for it.</para>
 /// <para>This makes no attempt to resolve <c>..</c> or reject otherwise illegal characters in filenames.</para>
 /// </remarks>
-public class InMemoryFileProvider : IFileProvider
+public class InMemoryFileProvider : ISyncWritableFileProvider
 {
     private readonly StringComparison _CaseSensitivity;
     private readonly StringComparer _CaseSensitivityComparer;
@@ -78,11 +80,13 @@ public class InMemoryFileProvider : IFileProvider
         set => _ = Change(NormalizePath(path), value);
     }
 
-    /// <summary>Creates or overwrites a file.</summary>
-    /// <param name="path">The full relative file path.</param>
-    /// <param name="content">The file content.</param>
-    /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now"/>.</param>
-    /// <returns>The <see cref="IFileInfo"/> for this file.</returns>
+    /// <inheritdoc />
+    public Stream Create(string path)
+    {
+        return new InMemoryFileStream(this, path);
+    }
+
+    /// <inheritdoc />
     public IFileInfo Write(string path, byte[] content, DateTimeOffset? lastModified = null)
     {
         var fileInfo = new InMemoryFileInfo(Path.GetFileName(path), content, lastModified);
@@ -90,20 +94,7 @@ public class InMemoryFileProvider : IFileProvider
         return fileInfo;
     }
 
-    /// <summary>Creates or overwrites a file.</summary>
-    /// <param name="path">The full relative file path.</param>
-    /// <param name="content">The file content (assumes UTF-8 encoding).</param>
-    /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now"/>.</param>
-    public IFileInfo Write(string path, string content, DateTimeOffset? lastModified = null)
-    {
-        var fileInfo = new InMemoryFileInfo(Path.GetFileName(path), content, lastModified);
-        this[path] = fileInfo;
-        return fileInfo;
-    }
-
-    /// <summary>Deletes a file.</summary>
-    /// <remarks>It's not an error if the file already does not exist.</remarks>
-    /// <param name="path">The full relative file path.</param>
+    /// <inheritdoc />
     public void Delete(string path)
     {
         this[path] = null!;

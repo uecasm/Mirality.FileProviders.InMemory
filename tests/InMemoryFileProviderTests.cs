@@ -444,6 +444,22 @@ public class InMemoryFileProviderTests
         Assert.That(dir.Exists, Is.False);
     }
 
+    [Test]
+    public void Create()
+    {
+        var provider = new InMemoryFileProvider();
+
+        var stream = provider.Create("test.bin");
+        Assert.That(provider.GetFileInfo("test.bin").Exists, Is.False);
+
+        stream.Write(new byte[] { 1, 2, 3, 4 }, 0, 4);
+        Assert.That(provider.GetFileInfo("test.bin").Exists, Is.False);
+
+        stream.Close();
+        Assert.That(provider.GetFileInfo("test.bin").Exists, Is.True);
+        Assert.That(provider.GetFileInfo("test.bin").Length, Is.EqualTo(4));
+    }
+
     private static byte[] Read(IFileInfo file)
     {
         using var stream = file.CreateReadStream();

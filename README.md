@@ -100,3 +100,15 @@ However note that in this case `Watch` will only report changes to the virtual f
 To handle this sort of thing, you will need to `Watch` the underlying provider yourself, and then trigger notifications on the in-memory provider by reassigning its indexer.  It will trigger notifications even if you re-assign the same `IFileInfo` instance, although it's recommended to fetch a new one to properly update associated properties such as the `Length` and `LastModified`.
 
 One exception to this is that reassigning a non-existing `IFileInfo` to an already non-existing path (i.e. trying to delete a file that doesn't exist) will not trigger any notifications.
+
+# `IWritableFileProvider` and `WritablePhysicalFileProvider`
+
+Possibly I should put these into a different library (feedback welcome!), but these types are also included here.
+
+The first is an interface which represents an `IFileProvider` that can accept file writes as well as just reads.  It is implemented by both of the providers in this library.
+
+The second is intended as a wrapper around either a `PhysicalFileProvider` or a `CompositeFileProvider` that includes a `PhysicalFileProvider`, enabling writes to the corresponding physical directory.
+
+These may be useful both for test scenarios where you do need real files, as well as in production code.  One advantage of using these over direct file manipulation is that the consumer of the provider need not be aware of where the containing directory is actually located (and indeed if there is a physical directory at all).  And the `WritablePhysicalFileProvider` prevents casual escape from the directory via `..` paths (although escape is technically still possible via mounts/junctions).
+
+`IWritableFileProvider` itself is actually three interfaces -- notably, `Write` is provided by `ISyncWritableFileProvider` and `WriteAsync` is provided by `IAsyncWritableFileProvider`.  A provider is free to provide one or both of these, whichever makes more sense for its underlying implementation (to avoid hinting at asynchrony when always completed synchronously, for example, and vice versa), and consumers can either require a specific derived interface for their intended usage, or can accept the base interface and either just use `Create` or adaptively call `Write` or `WriteAsync` as available.
