@@ -1,0 +1,13 @@
+﻿6.2.0
+    - Generic WriteAsync
+    - ReadAsBytes/ReadAsText convenience helpers
+    - Unit tests now explicitly cover .NET 4.8 as well as .NET 6.0
+
+6.1.0
+    - WritableFileProvider and friends
+
+6.0.1
+    - Add simplified Write/Delete methods
+
+6.0.0
+    - Initial release

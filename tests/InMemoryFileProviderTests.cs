@@ -33,12 +33,16 @@ public class InMemoryFileProviderTests
             Assert.That(file1.IsDirectory, Is.False);
             Assert.That(file1.Exists, Is.False);
             Assert.That(() => file1.CreateReadStream(), Throws.TypeOf<FileNotFoundException>());
+            Assert.That(() => file1.ReadAsBytes(), Throws.TypeOf<FileNotFoundException>());
+            Assert.That(() => file1.ReadAsText(), Throws.TypeOf<FileNotFoundException>());
 
             Assert.That(file2.Name, Is.EqualTo("file.bin"));
             Assert.That(file2.PhysicalPath, Is.Null);
             Assert.That(file2.IsDirectory, Is.False);
             Assert.That(file2.Exists, Is.False);
             Assert.That(() => file2.CreateReadStream(), Throws.TypeOf<FileNotFoundException>());
+            Assert.That(() => file2.ReadAsBytes(), Throws.TypeOf<FileNotFoundException>());
+            Assert.That(() => file2.ReadAsText(), Throws.TypeOf<FileNotFoundException>());
         });
     }
 
@@ -76,7 +80,8 @@ public class InMemoryFileProviderTests
             Assert.That(file1.Exists, Is.True);
             Assert.That(file1.LastModified, Is.EqualTo(DateTimeOffset.Now).Within(TimeSpan.FromSeconds(5)));
             Assert.That(file1.Length, Is.EqualTo(11));
-            Assert.That(Read(file1), Is.EqualTo("hello world".ToCharArray().Select(c => (byte) c).ToArray()));
+            Assert.That(file1.ReadAsBytes(), Is.EqualTo("hello world".ToCharArray().Select(c => (byte) c).ToArray()));
+            Assert.That(file1.ReadAsText(), Is.EqualTo("hello world"));
 
             Assert.That(file2.Name, Is.EqualTo("file.bin"));
             Assert.That(file2.PhysicalPath, Is.Null);
@@ -84,7 +89,7 @@ public class InMemoryFileProviderTests
             Assert.That(file2.Exists, Is.True);
             Assert.That(file2.LastModified, Is.EqualTo(DateTimeOffset.Now).Within(TimeSpan.FromSeconds(5)));
             Assert.That(file2.Length, Is.EqualTo(5));
-            Assert.That(Read(file2), Is.EqualTo(new byte[] { 1, 2, 3, 4, 5 }));
+            Assert.That(file2.ReadAsBytes(), Is.EqualTo(new byte[] { 1, 2, 3, 4, 5 }));
         });
     }
 
@@ -460,16 +465,53 @@ public class InMemoryFileProviderTests
         Assert.That(provider.GetFileInfo("test.bin").Length, Is.EqualTo(4));
     }
 
-    private static byte[] Read(IFileInfo file)
+    [Test]
+    public void ReadBytes()
     {
-        using var stream = file.CreateReadStream();
-        if (stream is MemoryStream ms)
-        {
-            return ms.ToArray();
-        }
+        var provider = new InMemoryFileProvider();
+        var data = new byte[] { 1, 2, 3, 4 };
 
-        using var output = new MemoryStream();
-        stream.CopyTo(output);
-        return output.ToArray();
+        provider.Write("test.bin", data);
+
+        var result = provider.GetFileInfo("test.bin").ReadAsBytes();
+
+        Assert.That(result, Is.EqualTo(data));
+    }
+
+    [Test]
+    public async Task ReadBytesAsync()
+    {
+        var provider = new InMemoryFileProvider();
+        var data = new byte[] { 1, 2, 3, 4 };
+
+        await provider.WriteAsync("test.bin", data);
+
+        var result = await provider.GetFileInfo("test.bin").ReadAsBytesAsync();
+
+        Assert.That(result, Is.EqualTo(data));
+    }
+
+    [Test]
+    public void ReadText()
+    {
+        var provider = new InMemoryFileProvider();
+
+        provider.Write("test.txt", "hello world");
+
+        var result = provider.GetFileInfo("test.txt").ReadAsText();
+
+        Assert.That(result, Is.EqualTo("hello world"));
+    }
+
+    [Test]
+    public async Task ReadTextAsync()
+    {
+        var provider = new InMemoryFileProvider();
+
+        await provider.WriteAsync("test.txt", "hello world");
+
+        var result = await provider.GetFileInfo("test.txt").ReadAsTextAsync();
+
+        Assert.That(result, Is.EqualTo("hello world"));
     }
 }

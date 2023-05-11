@@ -111,4 +111,63 @@ The second is intended as a wrapper around either a `PhysicalFileProvider` or a 
 
 These may be useful both for test scenarios where you do need real files, as well as in production code.  One advantage of using these over direct file manipulation is that the consumer of the provider need not be aware of where the containing directory is actually located (and indeed if there is a physical directory at all).  And the `WritablePhysicalFileProvider` prevents casual escape from the directory via `..` paths (although escape is technically still possible via mounts/junctions).
 
-`IWritableFileProvider` itself is actually three interfaces -- notably, `Write` is provided by `ISyncWritableFileProvider` and `WriteAsync` is provided by `IAsyncWritableFileProvider`.  A provider is free to provide one or both of these, whichever makes more sense for its underlying implementation (to avoid hinting at asynchrony when always completed synchronously, for example, and vice versa), and consumers can either require a specific derived interface for their intended usage, or can accept the base interface and either just use `Create` or adaptively call `Write` or `WriteAsync` as available.
+`IWritableFileProvider` itself is actually three interfaces -- notably, `Write` is provided by `ISyncWritableFileProvider` and `WriteAsync` is provided by `IAsyncWritableFileProvider`.  A provider is free to provide one or both of these, whichever makes more sense for its underlying implementation (to avoid hinting at asynchrony when always completed synchronously, for example, and vice versa), and consumers can either require a specific derived interface for their intended usage, or can accept the base interface and call the generic `WriteAsync`, which automatically delegates to the appropriate sub-interface.  Providers should not implement *only* the base `IWritableFileProvider` interface.
+
+# Using with the generic or web hosts
+
+While normally you wouldn't use this in your "real" application host, it's sometimes useful to write unit tests that create their own host, and use a virtual filesystem rather than a real one in those tests -- since in particular `Watch` is often slower and less reliable on a real filesystem, especially with the rapid-fire changes that tend to be happening in test cases.
+
+For the generic host:
+
+```cs
+var provider = new InMemoryFileProvider();
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration((ctx, cfg) =>
+    {
+        ctx.HostingEnvironment.ContentRootFileProvider = provider;
+        _ = cfg.SetFileProvider(provider);
+    })
+    // ...
+    .Build();
+```
+
+For the web application:
+
+```cs
+var provider = new InMemoryFileProvider();
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Environment.ContentRootFileProvider = provider;
+_ = builder.Configuration.SetFileProvider(provider);
+
+// ...
+```
+
+This sort of thing will only work for code that does actually make use of the `ContentRootFileProvider` rather than going directly to the filesystem.  This does include your `appsettings.json` file -- if you don't want to virtualize that, you can omit the `Configuration` call above.  For other code, you may need to modify it to use the file provider interfaces instead.
+
+## Making the content root writable, while keeping it real
+
+Similar to the above, you can use `WritablePhysicalFileProvider` instead of `InMemoryFileProvider`, if you want to use the real ContentRoot filesystem while retaining the ability to write to it -- though you should be very careful about doing this in a production app, since the changes will be persistent and improper validation could trash something you care about, possibly including the application files themselves.
+
+```cs
+.ConfigureAppConfiguration((ctx, cfg) =>
+{
+    var provider = new WritablePhysicalFileProvider(ctx.HostingEnvironment.ContentRootPath, ctx.HostingEnvironment.ContentRootFileProvider);
+    ctx.HostingEnvironment.ContentRootFileProvider = provider;
+    _ = cfg.SetFileProvider(provider);
+})
+```
+
+## What about the WebRoot?
+
+In a web application, you have an `IWebHostEnvironment`, which also has a `WebRootFileProvider`.  Should you change this too?
+
+The short answer is: usually not.
+
+The longer answer is that if you're certain you want to anyway, then you will typically have to set it to a `CompositeFileProvider` consisting of both your new `InMemoryFileProvider` and the previous `WebRootFileProvider` (in that order).  Otherwise it's very likely that you will break your app.
+
+When using `WritablePhysicalFileProvider`, this already chains to the original provider, so you don't need to add an extra composite.
+
+## What about in a library?
+
+Only the application itself should try to alter a global file provider like this.  Libraries should instead try to make use of the supplied provider if it meets their needs, or throw an exception if not (telling the application author how to configure appropriately to resolve it).  Or they can use their own separate internal providers -- though for testing convenience it's a good idea to provide some way to hook or override it if needed.

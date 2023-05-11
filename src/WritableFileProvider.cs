@@ -70,5 +70,39 @@ namespace Mirality.FileProviders
         {
             return provider.WriteAsync(path, Encoding.UTF8.GetBytes(content), lastModified, cancel);
         }
+
+        /// <summary>Creates or overwrites a file.</summary>
+        /// <param name="provider">The writable file provider.</param>
+        /// <param name="path">The full relative file path.</param>
+        /// <param name="content">The file content.</param>
+        /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now" />.</param>
+        /// <param name="cancel">Cancellation token.</param>
+        public static async ValueTask<IFileInfo> WriteAsync(this IWritableFileProvider provider, string path, byte[] content,
+            DateTimeOffset? lastModified = null, CancellationToken cancel = default)
+        {
+            return provider switch
+            {
+                IAsyncWritableFileProvider asyncProvider => await asyncProvider.WriteAsync(path, content, lastModified, cancel),
+                ISyncWritableFileProvider syncProvider => syncProvider.Write(path, content, lastModified),
+                _ => throw new InvalidOperationException("Expecting either ISyncWritableFileProvider or IAsyncWritableFileProvider")
+            };
+        }
+
+        /// <summary>Creates or overwrites a file.</summary>
+        /// <param name="provider">The writable file provider.</param>
+        /// <param name="path">The full relative file path.</param>
+        /// <param name="content">The file content (assumes UTF-8 encoding).</param>
+        /// <param name="lastModified">When the file was last modified.  Defaults to <see cref="DateTimeOffset.Now" />.</param>
+        /// <param name="cancel">Cancellation token.</param>
+        public static async ValueTask<IFileInfo> WriteAsync(this IWritableFileProvider provider, string path, string content,
+            DateTimeOffset? lastModified = null, CancellationToken cancel = default)
+        {
+            return provider switch
+            {
+                IAsyncWritableFileProvider asyncProvider => await asyncProvider.WriteAsync(path, content, lastModified, cancel),
+                ISyncWritableFileProvider syncProvider => syncProvider.Write(path, content, lastModified),
+                _ => throw new InvalidOperationException("Expecting either ISyncWritableFileProvider or IAsyncWritableFileProvider")
+            };
+        }
     }
 }

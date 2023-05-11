@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Primitives;
-
-#if !NETSTANDARD2_0
-using System.Diagnostics.CodeAnalysis;
-#endif
 
 namespace Mirality.FileProviders.InMemory;
 
@@ -67,9 +63,7 @@ public class InMemoryFileProvider : ISyncWritableFileProvider
     /// <c><see cref="IFileInfo.Exists">Exists</see> == <see langword="false"/></c>).</para>
     /// <para>The setter will accept <see langword="null"/> and interprets this as a delete of the corresponding file, if it exists.</para>
     /// </returns>
-#if !NETSTANDARD2_0
     [AllowNull]
-#endif
     public IFileInfo this[string path]
     {
         get

@@ -43,6 +43,66 @@ public class WritablePhysicalFileProviderTests
     }
 
     [Test]
+    public void ReadBytes()
+    {
+        var data = new byte[] { 1, 2, 3, 4 };
+
+        File.WriteAllBytes(Path.Combine(_TestDirectory, "test.bin"), data);
+
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var result = provider.GetFileInfo("test.bin").ReadAsBytes();
+
+        Assert.That(result, Is.EqualTo(data));
+    }
+
+    [Test]
+    public async Task ReadBytesAsync()
+    {
+        var data = new byte[] { 1, 2, 3, 4 };
+
+#if NETCOREAPP2_0_OR_GREATER
+        await File.WriteAllBytesAsync(Path.Combine(_TestDirectory, "test.bin"), data);
+#else
+        File.WriteAllBytes(Path.Combine(_TestDirectory, "test.bin"), data);
+#endif
+
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var result = await provider.GetFileInfo("test.bin").ReadAsBytesAsync();
+
+        Assert.That(result, Is.EqualTo(data));
+    }
+
+    [Test]
+    public void ReadText()
+    {
+        File.WriteAllText(Path.Combine(_TestDirectory, "test.txt"), "hello world");
+
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var result = provider.GetFileInfo("test.txt").ReadAsText();
+
+        Assert.That(result, Is.EqualTo("hello world"));
+    }
+
+    [Test]
+    public async Task ReadTextAsync()
+    {
+#if NETCOREAPP2_0_OR_GREATER
+        await File.WriteAllTextAsync(Path.Combine(_TestDirectory, "test.txt"), "hello world");
+#else
+        File.WriteAllText(Path.Combine(_TestDirectory, "test.txt"), "hello world");
+#endif
+
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var result = await provider.GetFileInfo("test.txt").ReadAsTextAsync();
+
+        Assert.That(result, Is.EqualTo("hello world"));
+    }
+
+    [Test]
     public void WriteBytesSync()
     {
         var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
@@ -90,6 +150,33 @@ public class WritablePhysicalFileProviderTests
 
         var timestamp = new DateTimeOffset(2021, 12, 25, 12, 34, 56, TimeSpan.Zero);
         var file = await provider.WriteAsync("test.txt", "hello world", timestamp);
+
+        Assert.That(file.Exists);
+        Assert.That(_PhysicalFileProvider.GetFileInfo("test.txt").Exists);
+        Assert.That(_PhysicalFileProvider.GetFileInfo("test.txt").LastModified, Is.EqualTo(timestamp));
+    }
+
+    [Test]
+    public async Task WriteBytesAsyncGeneric()
+    {
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var timestamp = new DateTimeOffset(2021, 12, 25, 12, 34, 56, TimeSpan.Zero);
+        var bytes = new byte[] { 1, 2, 3, 4, 5, 6 };
+        var file = await ((IWritableFileProvider) provider).WriteAsync("test.bin", bytes, timestamp);
+
+        Assert.That(file.Exists);
+        Assert.That(_PhysicalFileProvider.GetFileInfo("test.bin").Exists);
+        Assert.That(_PhysicalFileProvider.GetFileInfo("test.bin").LastModified, Is.EqualTo(timestamp));
+    }
+
+    [Test]
+    public async Task WriteTextAsyncGeneric()
+    {
+        var provider = new WritablePhysicalFileProvider(_TestDirectory, _PhysicalFileProvider);
+
+        var timestamp = new DateTimeOffset(2021, 12, 25, 12, 34, 56, TimeSpan.Zero);
+        var file = await ((IWritableFileProvider) provider).WriteAsync("test.txt", "hello world", timestamp);
 
         Assert.That(file.Exists);
         Assert.That(_PhysicalFileProvider.GetFileInfo("test.txt").Exists);
