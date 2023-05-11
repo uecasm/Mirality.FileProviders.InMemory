@@ -3,8 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>10</LangVersion>
-    <VersionPrefix>6.2.0</VersionPrefix>
+    <VersionPrefix>6.2.1</VersionPrefix>
     <Nullable>enable</Nullable>
+    <RootNamespace>Mirality.FileProviders</RootNamespace>
     <Authors>uecasm</Authors>
     <Company>Mirality Systems</Company>
     <Description>An in-memory mutable IFileProvider; mainly intended for unit tests, but can be useful in other cases too.</Description>

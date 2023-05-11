@@ -1,4 +1,7 @@
-﻿6.2.0
+﻿6.2.1
+    - Fix a namespace derp and restructure things to avoid it happening again
+
+6.2.0
     - Generic WriteAsync
     - ReadAsBytes/ReadAsText convenience helpers
     - Unit tests now explicitly cover .NET 4.8 as well as .NET 6.0

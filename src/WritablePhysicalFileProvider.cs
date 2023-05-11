@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 
-// ReSharper disable once CheckNamespace
 namespace Mirality.FileProviders
 {
     /// <summary>This is an <see cref="IWritableFileProvider"/> that wraps an existing <see cref="IFileProvider"/>

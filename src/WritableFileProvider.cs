@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-// ReSharper disable once CheckNamespace
 namespace Mirality.FileProviders
 {
     /// <summary>Abstract interface for <see cref="IFileProvider"/> that can accept file writes as well.</summary>
